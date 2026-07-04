@@ -1,0 +1,13 @@
+{
+  "name": "Spor — vanesporing",
+  "short_name": "Spor",
+  "description": "Enkel, lokal vanesporing. Seks måletyper, ukemål, innsjekk og statistikk.",
+  "lang": "nb",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0e120f",
+  "theme_color": "#0e120f",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
