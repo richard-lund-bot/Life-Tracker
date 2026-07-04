@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spor — vanesporing</title>
+<meta name="description" content="Spor — enkel, lokal vanesporing. Seks måletyper, ukemål, innsjekk og statistikk.">
+<meta name="theme-color" content="#0e120f">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <img src="icon.svg" alt="" class="brand-icon">
+        <span class="brand-name">Spor</span>
+      </div>
+      <button class="icon-btn" data-action="toggle-theme" title="Bytt tema" aria-label="Bytt mellom lyst og mørkt tema">◐</button>
+    </header>
+
+    <main id="view" class="view" aria-live="polite"></main>
+
+    <nav class="tabbar" aria-label="Hovedmeny">
+      <button class="tab" data-action="tab" data-tab="today"><span class="tab-icon">🐾</span><span>I dag</span></button>
+      <button class="tab" data-action="tab" data-tab="stats"><span class="tab-icon">📈</span><span>Statistikk</span></button>
+      <button class="tab" data-action="tab" data-tab="habits"><span class="tab-icon">🗂️</span><span>Vaner</span></button>
+    </nav>
+  </div>
+
+  <div id="modal-root" class="modal-root" hidden>
+    <div class="modal-backdrop" data-action="modal-close"></div>
+    <div class="modal" role="dialog" aria-modal="true"></div>
+  </div>
+
+  <div id="confetti-root" aria-hidden="true"></div>
+  <input type="file" id="import-file" accept="application/json" hidden>
+
+  <script src="js/vendor/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/library.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
