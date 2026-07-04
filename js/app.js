@@ -65,14 +65,16 @@
 
   const defaultState = () => ({
     habits: [],       // habit objects, see createHabit()
-    logs: {},         // "habitId|YYYY-MM-DD" -> { value?, at? }  (unngaa: value 1 = slip)
-    checkins: {},     // "YYYY-MM-DD" -> { mood?, energy?, note? }
+    logs: {},         // "habitId|YYYY-MM-DD" -> { value?, at?, updatedAt }  (unngaa: value 1 = slip)
+    checkins: {},     // "YYYY-MM-DD" -> { mood?, energy?, note?, updatedAt }
     settings: { theme: null }, // null = follow system
     onboarded: false,
+    outbox: [],       // pending sync ops, managed by SporSync
+    syncInitialized: false,
   });
 
   let state = load();
-  let ui = { tab: 'today', date: todayISO() };
+  let ui = { tab: 'today', date: todayISO(), syncEmail: '', syncSent: false, syncError: '', syncBusy: false };
   let lastPerfectShown = null; // avoid re-firing confetti on re-render
 
   function load() {
@@ -119,9 +121,24 @@
   const logKey = (id, iso) => `${id}|${iso}`;
   const getLog = (id, iso) => state.logs[logKey(id, iso)] || null;
   function setLog(id, iso, entry) {
-    if (entry == null) delete state.logs[logKey(id, iso)];
-    else state.logs[logKey(id, iso)] = entry;
+    const key = logKey(id, iso);
+    if (entry == null) delete state.logs[key];
+    else state.logs[key] = { ...entry, updatedAt: Date.now() };
     save();
+    SporSync.queue('log', entry == null ? 'del' : 'up', key);
+  }
+
+  function setCheckin(iso, ci) {
+    if (ci && Object.keys(ci).length) state.checkins[iso] = { ...ci, updatedAt: Date.now() };
+    else delete state.checkins[iso];
+    save();
+    SporSync.queue('checkin', ci && Object.keys(ci).length ? 'up' : 'del', iso);
+  }
+
+  function touchHabit(h) {
+    h.updatedAt = Date.now();
+    save();
+    SporSync.queue('habit', 'up', h.id);
   }
 
   // Is this fixed-schedule habit due on the given date?
@@ -734,6 +751,8 @@
       html += arch.map((h) => manageRow(h, true)).join('');
     }
 
+    html += `<div class="section-title">Skysynk</div>${renderSyncCard()}`;
+
     html += `
       <div class="section-title">Data</div>
       <div class="card">
@@ -762,6 +781,59 @@
             : `<button data-action="edit-open" title="Rediger" aria-label="Rediger">✏️</button>
                <button data-action="archive" title="Arkiver" aria-label="Arkiver">📦</button>`}
         </div>
+      </div>`;
+  }
+
+  function renderSyncCard() {
+    const st = SporSync.getStatus();
+    const err = ui.syncError ? `<p style="font-size:12.5px;color:var(--danger);margin:8px 0 0">${esc(ui.syncError)}</p>` : '';
+
+    if (!st.configured) {
+      return `
+        <div class="card">
+          <p style="font-size:13px;color:var(--text-2);margin:0">
+            ☁️ Ikke konfigurert — appen virker helt lokalt.
+            Vil du synke mellom enheter, følg <strong>docs/supabase-setup.md</strong>
+            og fyll inn <code>js/config.js</code>.
+          </p>
+        </div>`;
+    }
+
+    if (st.state !== 'in') {
+      return `
+        <div class="card">
+          <p style="font-size:13px;color:var(--text-2);margin:0 0 8px">
+            Logg inn med e-post for å synke mellom enheter. Du får en engangskode — intet passord.
+          </p>
+          <div class="form-grid">
+            <input type="email" id="sync-email" placeholder="din@epost.no" value="${esc(ui.syncEmail)}"
+                   style="width:100%;border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:10px;padding:9px 10px;font-size:15px">
+            ${ui.syncSent ? `
+              <input type="text" id="sync-code" inputmode="numeric" placeholder="6-sifret kode fra e-posten"
+                     style="width:100%;border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:10px;padding:9px 10px;font-size:15px">
+              <button class="big-btn" style="margin:0" data-action="sync-verify" ${ui.syncBusy ? 'disabled' : ''}>Logg inn</button>
+              <button class="link-btn" data-action="sync-send" ${ui.syncBusy ? 'disabled' : ''}>Send ny kode</button>
+            ` : `
+              <button class="big-btn" style="margin:0" data-action="sync-send" ${ui.syncBusy ? 'disabled' : ''}>Send innloggingskode</button>
+            `}
+          </div>
+          ${err}
+        </div>`;
+    }
+
+    const lastSync = st.lastSync
+      ? new Date(st.lastSync).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })
+      : '–';
+    return `
+      <div class="card">
+        <p style="font-size:13.5px;margin:0 0 4px">☁️ Innlogget som <strong>${esc(st.email || '')}</strong></p>
+        <p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">
+          ${st.syncing ? 'Synkroniserer …' : `Sist synket: ${lastSync}`}
+          ${st.pending ? ` · ${st.pending} endring${st.pending === 1 ? '' : 'er'} i kø` : ''}
+          ${st.detail ? ` · ⚠️ ${esc(st.detail)}` : ''}
+        </p>
+        <button class="link-btn" data-action="sync-now" ${st.syncing ? 'disabled' : ''}>🔄 Synk nå</button>
+        <button class="link-btn danger-link" data-action="sync-logout">Logg ut</button>
       </div>`;
   }
 
@@ -929,10 +1001,12 @@
         direction: data.direction, targetTime: data.targetTime, timeSide: data.timeSide,
         weeklyTarget: data.weeklyTarget, weekdays: data.weekdays,
       });
+      touchHabit(h);
     } else {
-      state.habits.push(createHabit(data));
+      const h = createHabit(data);
+      state.habits.push(h);
+      touchHabit(h);
     }
-    save();
     closeModal();
     render();
   }
@@ -945,11 +1019,12 @@
     if (!tpl) return;
     const existing = habitById(libId);
     if (existing) {
-      if (existing.archivedAt) existing.archivedAt = null; // restore, history intact
+      if (existing.archivedAt) { existing.archivedAt = null; touchHabit(existing); } // restore, history intact
     } else {
-      state.habits.push(createHabit(tpl));
+      const h = createHabit(tpl);
+      state.habits.push(h);
+      touchHabit(h);
     }
-    save();
   }
 
   function addStarterSet() {
@@ -1007,6 +1082,8 @@
         if (!confirm('Importere sikkerhetskopi? Dette erstatter alle data i denne nettleseren.')) return;
         state = { ...defaultState(), habits: data.habits, logs: data.logs || {}, checkins: data.checkins || {}, settings: data.settings || defaultState().settings, onboarded: true };
         save();
+        SporSync.enqueueFullPush(); // if signed in, imported data replaces the cloud copy too
+        SporSync.syncNow();
         render();
       } catch {
         alert('Kunne ikke lese fila.');
@@ -1041,11 +1118,11 @@
       case 'checkin-mood': case 'checkin-energy': {
         const key = action === 'checkin-mood' ? 'mood' : 'energy';
         const val = Number(btn.dataset.val);
-        const ci = state.checkins[iso] || {};
-        ci[key] = ci[key] === val ? undefined : val;
-        if (ci[key] === undefined) delete ci[key];
-        if (Object.keys(ci).length) state.checkins[iso] = ci; else delete state.checkins[iso];
-        save(); render(); break;
+        const ci = { ...(state.checkins[iso] || {}) };
+        delete ci.updatedAt;
+        if (ci[key] === val) delete ci[key]; else ci[key] = val;
+        setCheckin(iso, Object.keys(ci).length ? ci : null);
+        render(); break;
       }
 
       case 'toggle-check': {
@@ -1099,14 +1176,37 @@
       case 'edit-open': openHabitForm(habit); break;
       case 'archive': {
         habit.archivedAt = todayISO();
-        save(); render(); break;
+        touchHabit(habit); render(); break;
       }
-      case 'restore': habit.archivedAt = null; save(); render(); break;
+      case 'restore': habit.archivedAt = null; touchHabit(habit); render(); break;
+
+      case 'sync-send': {
+        const email = $('#sync-email')?.value.trim();
+        if (!email) break;
+        ui.syncEmail = email; ui.syncError = ''; ui.syncBusy = true; render();
+        SporSync.sendCode(email)
+          .then(() => { ui.syncSent = true; })
+          .catch((err) => { ui.syncError = err.message || 'Kunne ikke sende kode.'; })
+          .finally(() => { ui.syncBusy = false; render(); });
+        break;
+      }
+      case 'sync-verify': {
+        const code = $('#sync-code')?.value.trim();
+        if (!code) break;
+        ui.syncError = ''; ui.syncBusy = true; render();
+        SporSync.verifyCode(ui.syncEmail, code)
+          .then(() => { ui.syncSent = false; })
+          .catch((err) => { ui.syncError = err.message || 'Feil kode.'; })
+          .finally(() => { ui.syncBusy = false; render(); });
+        break;
+      }
+      case 'sync-now': SporSync.syncNow(); break;
+      case 'sync-logout': SporSync.signOut().then(render); break;
 
       case 'export': exportData(); break;
       case 'import': $('#import-file').click(); break;
       case 'reset-all': {
-        if (confirm('Slette ALLE vaner, logger og innsjekk? Dette kan ikke angres.')
+        if (confirm('Slette ALLE vaner, logger og innsjekk i denne nettleseren? (En eventuell sky-kopi røres ikke.) Dette kan ikke angres.')
           && confirm('Helt sikker? Eksporter gjerne først.')) {
           state = defaultState();
           save(); render();
@@ -1140,10 +1240,10 @@
     if (!kind) return;
     const iso = ui.date;
     if (kind === 'checkin-note') {
-      const ci = state.checkins[iso] || {};
+      const ci = { ...(state.checkins[iso] || {}) };
+      delete ci.updatedAt;
       if (el.value.trim()) ci.note = el.value.trim(); else delete ci.note;
-      if (Object.keys(ci).length) state.checkins[iso] = ci; else delete state.checkins[iso];
-      save();
+      setCheckin(iso, Object.keys(ci).length ? ci : null);
       return; // don't re-render mid-typing flow
     }
     const habitEl = el.closest('[data-habit]');
@@ -1173,6 +1273,17 @@
   // ------------------------------------------------ boot
 
   render();
+
+  SporSync.init({
+    getState: () => state,
+    saveState: save,
+    onChange: () => {
+      // Skip background re-renders while the user is typing in a field.
+      const ae = document.activeElement;
+      if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return;
+      render();
+    },
+  });
 
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => { /* offline support is best-effort */ });

@@ -50,22 +50,38 @@ biblioteket med ~60 vaner i 8 kategorier.
 - **Lyst/mørkt tema**, følger systemet eller manuell veksling.
 - **Eksport/import** av alle data som JSON.
 
+## Skysynk (valgfritt)
+
+Appen har innebygd Supabase-synk: passordløs innlogging med engangskode på
+e-post, offline-kø for endringer, og last-write-wins-fletting mellom enheter.
+Oppsett tar ~5 minutter — se **[docs/supabase-setup.md](docs/supabase-setup.md)**:
+
+1. Opprett et gratis Supabase-prosjekt kalt `spor` (region `eu-north-1`).
+2. Kjør [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql)
+   i SQL-editoren (tabeller + Row Level Security).
+3. Lim inn Project URL og publishable key i [`js/config.js`](js/config.js).
+4. Logg inn under **Vaner → Skysynk**.
+
+Uten konfigurasjon kjører alt som før — helt lokalt.
+
 ## Prosjektstruktur
 
 ```
-index.html            appskall (tre faner: I dag · Statistikk · Vaner)
-css/styles.css        tema (lys/mørk), komponenter
-js/library.js         vanebiblioteket (~60 vaner) + anbefalt startsett
-js/app.js             tilstand, domenelogikk, rendering, hendelser
-sw.js                 service worker (offline)
-docs/                 original spesifikasjon
+index.html                 appskall (tre faner: I dag · Statistikk · Vaner)
+css/styles.css             tema (lys/mørk), komponenter
+js/library.js              vanebiblioteket (~60 vaner) + anbefalt startsett
+js/app.js                  tilstand, domenelogikk, rendering, hendelser
+js/config.js               Supabase-nøkler (tom = kun lokal)
+js/sync.js                 synk-adapter: auth, utboks, pull/flett
+js/vendor/supabase.js      supabase-js (UMD, vendored — funker offline)
+supabase/migrations/       databaseskjema med RLS
+sw.js                      service worker (offline)
+docs/                      spesifikasjon + Supabase-oppsett
 ```
 
 ## Veikart (fra spesifikasjonen)
 
-- [ ] Supabase-synk (eget gratis prosjekt `spor`) — datamodellen i appen speiler
-      allerede skjemaet i spesifikasjonen (`kind`, `unit`, `direction`,
-      `target_time`, `weekly_target`), så en synk-adapter kan legges på uten
-      å endre domenelogikken.
+- [x] Supabase-synk — klient ferdig; opprett prosjektet og lim inn nøklene
+      (se over).
 - [ ] Push av skritt/søvn fra Garmin-shortcut.
 - [ ] Påminnelser (web push).

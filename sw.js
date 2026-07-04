@@ -1,9 +1,12 @@
 /* Spor — service worker: cache-first so the app works offline. */
-const CACHE = 'spor-v1';
+const CACHE = 'spor-v2';
 const ASSETS = [
   './',
   './index.html',
   './css/styles.css',
+  './js/vendor/supabase.js',
+  './js/config.js',
+  './js/sync.js',
   './js/library.js',
   './js/app.js',
   './icon.svg',
