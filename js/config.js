@@ -6,5 +6,5 @@
 
 const SPOR_CONFIG = {
   supabaseUrl: 'https://bynvelvcbpdnvhpwjuru.supabase.co',
-  supabaseKey: '',   // 'sb_publishable_…' from Project Settings → API (or legacy anon key)
+  supabaseKey: 'sb_publishable_uppu5OuUW11Ml9mMVtq3GQ_n0ofeGRM',
 };
