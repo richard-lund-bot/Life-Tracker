@@ -57,7 +57,7 @@ e-post, offline-kø for endringer, og last-write-wins-fletting mellom enheter.
 Oppsett tar ~5 minutter — se **[docs/supabase-setup.md](docs/supabase-setup.md)**:
 
 1. Opprett et gratis Supabase-prosjekt kalt `spor` (region `eu-north-1`).
-2. Kjør [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql)
+2. Kjør [`supabase/migrations/20260704120000_init.sql`](supabase/migrations/20260704120000_init.sql)
    i SQL-editoren (tabeller + Row Level Security).
 3. Lim inn Project URL og publishable key i [`js/config.js`](js/config.js).
 4. Logg inn under **Vaner → Skysynk**.

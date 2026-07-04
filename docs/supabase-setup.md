@@ -5,7 +5,7 @@ alle enheter, med passordløs innlogging (engangskode på e-post).
 
 Alt klient-arbeidet er allerede gjort: `js/sync.js` (offline-kø + flett),
 `js/vendor/supabase.js` (ingen CDN-avhengighet) og migrasjonen i
-`supabase/migrations/0001_init.sql`. Det eneste som gjenstår er å opprette
+`supabase/migrations/20260704120000_init.sql`. Det eneste som gjenstår er å opprette
 prosjektet og lime inn to verdier.
 
 ## 1. Opprett prosjektet
@@ -23,14 +23,21 @@ kan godkjennes — verktøyene er koblet til, men krever godkjenning per kall.)*
 ## 2. Kjør migrasjonen
 
 Dashboard → **SQL Editor** → lim inn hele innholdet i
-[`supabase/migrations/0001_init.sql`](../supabase/migrations/0001_init.sql) → **Run**.
+[`supabase/migrations/20260704120000_init.sql`](../supabase/migrations/20260704120000_init.sql) → **Run**.
 
 Dette oppretter `habits`, `logs` og `checkins` med Row Level Security slik at
 hver bruker kun ser sine egne rader. Skjemaet følger spesifikasjonens delta
 (`kind`, `unit`, `direction`, `target_time`, `weekly_target`, `logs.value numeric`,
 `logs.at time`).
 
-Med Supabase CLI i stedet: `supabase link --project-ref <ref> && supabase db push`.
+Med Supabase CLI i stedet (repoet har `supabase/config.toml`, så `supabase init`
+trengs ikke):
+
+```sh
+supabase login
+supabase link --project-ref bynvelvcbpdnvhpwjuru   # spør etter databasepassordet
+supabase db push                                    # kjører migrasjonen
+```
 
 ## 3. Sjekk innloggingsmetoden
 

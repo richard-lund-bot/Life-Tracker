@@ -5,6 +5,6 @@
  * purely local (everything else works without it). */
 
 const SPOR_CONFIG = {
-  supabaseUrl: '',   // e.g. 'https://abcdefghij.supabase.co'
-  supabaseKey: '',   // 'sb_publishable_…' (or legacy anon key)
+  supabaseUrl: 'https://bynvelvcbpdnvhpwjuru.supabase.co',
+  supabaseKey: '',   // 'sb_publishable_…' from Project Settings → API (or legacy anon key)
 };
