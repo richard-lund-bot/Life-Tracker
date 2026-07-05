@@ -497,7 +497,7 @@
         return `
           <div class="stepper">
             <button data-action="counter-dec" aria-label="Minus én">−</button>
-            <span class="val">${value}${h.direction === 'logg' ? '' : `<small>/${h.target}</small>`}</span>
+            <button class="val val-btn" data-action="counter-set" aria-label="Skriv inn antall">${value}${h.direction === 'logg' ? '' : `<small>/${h.target}</small>`}</button>
             <button data-action="counter-inc" aria-label="Pluss én">＋</button>
           </div>`;
       case 'poeng': {
@@ -1260,6 +1260,17 @@
           const next = Math.max(floor, cur + delta);
           setLog(habit.id, iso, next === 0 ? null : { value: next });
         }
+        rerender(); break;
+      }
+      case 'counter-set': {
+        const log = getLog(habit.id, iso);
+        const cur = log ? Number(log.value) || 0 : 0;
+        const input = prompt('Skriv inn antall:', cur ? String(cur) : '');
+        if (input == null) break;
+        const n = Math.round(Number(input.replace(',', '.')));
+        if (Number.isNaN(n)) break;
+        const val = habit.allowNegative ? n : Math.max(0, n);
+        setLog(habit.id, iso, val === 0 ? null : { value: val });
         rerender(); break;
       }
       case 'minutes-add': {
