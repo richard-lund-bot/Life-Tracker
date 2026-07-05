@@ -4,9 +4,9 @@ Synk er valgfritt — appen er fullt brukbar lokalt. Med synk får du samme data
 alle enheter, med passordløs innlogging (engangskode på e-post).
 
 Alt klient-arbeidet er allerede gjort: `js/sync.js` (offline-kø + flett),
-`js/vendor/supabase.js` (ingen CDN-avhengighet) og migrasjonen i
-`supabase/migrations/20260704120000_init.sql`. Det eneste som gjenstår er å opprette
-prosjektet og lime inn to verdier.
+`js/vendor/supabase.js` (ingen CDN-avhengighet) og migrasjonene i
+`supabase/migrations/`. Det eneste som gjenstår er å opprette prosjektet og
+lime inn to verdier.
 
 ## 1. Opprett prosjektet
 
@@ -20,15 +20,22 @@ Gå til [supabase.com/dashboard](https://supabase.com/dashboard) → **New proje
 *(Alternativ: be Claude Code gjøre det i en interaktiv økt der Supabase-MCP-kall
 kan godkjennes — verktøyene er koblet til, men krever godkjenning per kall.)*
 
-## 2. Kjør migrasjonen
+## 2. Kjør migrasjonene
 
-Dashboard → **SQL Editor** → lim inn hele innholdet i
-[`supabase/migrations/20260704120000_init.sql`](../supabase/migrations/20260704120000_init.sql) → **Run**.
+Dashboard → **SQL Editor** → kjør **alle** filene i
+[`supabase/migrations/`](../supabase/migrations/) i filnavns­rekkefølge (eldst
+først), én om gangen:
 
-Dette oppretter `habits`, `logs` og `checkins` med Row Level Security slik at
-hver bruker kun ser sine egne rader. Skjemaet følger spesifikasjonens delta
-(`kind`, `unit`, `direction`, `target_time`, `weekly_target`, `logs.value numeric`,
-`logs.at time`).
+1. `20260704120000_init.sql` — oppretter `habits`, `logs` og `checkins` med Row
+   Level Security slik at hver bruker kun ser sine egne rader. Skjemaet følger
+   spesifikasjonens delta (`kind`, `unit`, `direction`, `target_time`,
+   `weekly_target`, `logs.value numeric`, `logs.at time`).
+2. `20260705120000_allow_negative.sql` — kolonne for negative tellere.
+3. `20260705130000_poeng_kind.sql` — utvider `kind` med `poeng` (akkumulert
+   Poengmål).
+
+Hopper du over de to siste, feiler synk av vaner så snart en vane bruker
+negative tall eller Poengmål-typen.
 
 Med Supabase CLI i stedet (repoet har `supabase/config.toml`, så `supabase init`
 trengs ikke):

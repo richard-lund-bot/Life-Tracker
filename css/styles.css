@@ -54,6 +54,9 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.45;
+  /* Slår av dobbeltrykk-zoom (og 300ms tap-forsinkelsen), men beholder
+     pinch-zoom for tilgjengelighet. */
+  touch-action: manipulation;
 }
 button { font: inherit; color: inherit; }
 
@@ -235,6 +238,32 @@ button { font: inherit; color: inherit; }
   font-size: 14px;
 }
 .stepper .val small { color: var(--muted); font-weight: 500; }
+.stepper.poeng .val { min-width: 72px; }
+.stepper.poeng .val small { display: block; font-size: 10px; line-height: 1.1; }
+
+/* Poengmål — inline progress bar in the today subtitle */
+.habit .habit-sub .pbar {
+  display: inline-block;
+  width: 84px; height: 6px;
+  border-radius: 999px;
+  background: var(--ring-track);
+  vertical-align: middle;
+  overflow: hidden;
+  margin-right: 2px;
+}
+.habit .habit-sub .pbar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+
+/* Poengmål — progress block in the stats card */
+.poeng-progress { margin: 4px 0 8px; }
+.poeng-progress .pp-track {
+  height: 10px; border-radius: 999px;
+  background: var(--ring-track); overflow: hidden;
+}
+.poeng-progress .pp-track i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.poeng-progress .pp-nums {
+  font-size: 12.5px; color: var(--text-2);
+  margin-top: 5px; font-variant-numeric: tabular-nums;
+}
 
 .chips { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; max-width: 172px; }
 .chips button {
@@ -472,6 +501,23 @@ button { font: inherit; color: inherit; }
   border-radius: 10px;
   padding: 9px 10px;
   font-size: 15px;
+}
+.form-grid label.check-label {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 0;
+  font-weight: 500;
+  color: var(--text-2);
+  line-height: 1.35;
+  cursor: pointer;
+}
+.form-grid label.check-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  accent-color: var(--accent);
 }
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .form-row-emoji { display: grid; grid-template-columns: 76px 1fr; gap: 10px; }

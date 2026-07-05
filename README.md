@@ -23,16 +23,17 @@ biblioteket med ~60 vaner i 8 kategorier.
 
 ## Funksjoner
 
-### Seks måletyper + ukemål (fra spesifikasjonen)
+### Sju måletyper + ukemål (fra spesifikasjonen)
 
 | Type | Slik logger du | Suksess når |
 |---|---|---|
 | ✅ Sjekk | ett trykk | logget den dagen |
-| 🔢 Teller | − / ＋ stepper | verdi ≥ mål (eller ≤ mål ved retning «ned») |
+| 🔢 Teller | − / ＋ stepper (kan tillate negative tall) | verdi ≥ mål (eller ≤ mål ved retning «ned») |
 | ⏱️ Minutter | hurtigknapper 5 · 10 · 20 · 30 · ✎ | minutter ≥ mål |
 | 📏 Mengde | tall + enhet (km, g, kr …) | opp: ≥ mål · ned: ≤ mål · logg: kun trend |
 | 🕐 Tidspunkt | klokkeslett (eller «nå») | på riktig side av målet («før 23:00») |
 | 🚫 Unngå | *invertert:* dagen lykkes automatisk med mindre du logger en glipp | vises som «🔥 12 dager uten» |
+| 🎯 Poengmål | − / ＋ stepper, akkumuleres over tid (nullstilles aldri) | livstidssum ≥ mål (f.eks. 1000) |
 | 🗓️ Ukemål | kombineres med alle typene | N fullføringer per uke, vises som 2/3 |
 
 ### I tillegg
@@ -57,8 +58,9 @@ e-post, offline-kø for endringer, og last-write-wins-fletting mellom enheter.
 Oppsett tar ~5 minutter — se **[docs/supabase-setup.md](docs/supabase-setup.md)**:
 
 1. Opprett et gratis Supabase-prosjekt kalt `spor` (region `eu-north-1`).
-2. Kjør [`supabase/migrations/20260704120000_init.sql`](supabase/migrations/20260704120000_init.sql)
-   i SQL-editoren (tabeller + Row Level Security).
+2. Kjør alle filene i [`supabase/migrations/`](supabase/migrations/) i
+   filnavns­rekkefølge i SQL-editoren (tabeller + Row Level Security, og senere
+   skjemaendringer). Med Supabase CLI tar `supabase db push` alle på én gang.
 3. Lim inn Project URL og publishable key i [`js/config.js`](js/config.js).
 4. Logg inn under **Vaner → Skysynk**.
 

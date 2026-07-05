@@ -139,6 +139,7 @@ const SporSync = (() => {
   const habitToRow = (h) => ({
     id: h.id, name: h.name, emoji: h.emoji, category: h.category, kind: h.kind,
     target: h.target, unit: h.unit, direction: h.direction,
+    allow_negative: !!h.allowNegative,
     target_time: h.targetTime, time_side: h.timeSide,
     weekly_target: h.weeklyTarget, weekdays: h.weekdays,
     created_on: h.createdAt, archived_on: h.archivedAt,
@@ -147,7 +148,8 @@ const SporSync = (() => {
   const rowToHabit = (r) => ({
     id: r.id, name: r.name, emoji: r.emoji || '⭐', category: r.category || 'Egne vaner',
     kind: r.kind, target: r.target != null ? Number(r.target) : null, unit: r.unit,
-    direction: r.direction, targetTime: r.target_time ? r.target_time.slice(0, 5) : null,
+    direction: r.direction, allowNegative: !!r.allow_negative,
+    targetTime: r.target_time ? r.target_time.slice(0, 5) : null,
     timeSide: r.time_side, weeklyTarget: r.weekly_target,
     weekdays: r.weekdays || [0, 1, 2, 3, 4, 5, 6],
     createdAt: r.created_on, archivedAt: r.archived_on,
