@@ -534,7 +534,9 @@
           <div class="amount">
             <input type="time" data-change="time" value="${log && log.at ? esc(log.at) : ''}"
                    aria-label="Tidspunkt">
-            ${log && log.at ? (s === 'success' ? '<span>✅</span>' : '<span>❌</span>') : `<button class="undo-btn" data-action="time-now">nå</button>`}
+            ${log && log.at
+              ? `<span>${s === 'success' ? '✅' : '❌'}</span><button class="chip-reset" data-action="time-reset" aria-label="Nullstill">×</button>`
+              : `<button class="undo-btn" data-action="time-now">nå</button>`}
           </div>`;
       case 'unngaa':
         return s === 'fail'
@@ -1296,6 +1298,7 @@
         setLog(habit.id, iso, { at: `${pad2(now.getHours())}:${pad2(now.getMinutes())}` });
         rerender(); break;
       }
+      case 'time-reset': setLog(habit.id, iso, null); render(); break;
       case 'slip': setLog(habit.id, iso, { value: 1 }); render(); break;
       case 'slip-undo': setLog(habit.id, iso, null); rerender(); break;
 
