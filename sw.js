@@ -1,5 +1,5 @@
 /* Spor — service worker: cache-first so the app works offline. */
-const CACHE = 'spor-v5';
+const CACHE = 'spor-v6';
 const ASSETS = [
   './',
   './index.html',

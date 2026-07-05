@@ -238,6 +238,15 @@ button { font: inherit; color: inherit; }
   font-size: 14px;
 }
 .stepper .val small { color: var(--muted); font-weight: 500; }
+.stepper .val-btn {
+  width: auto; height: auto;
+  border: none; background: none;
+  border-radius: 8px;
+  padding: 4px 6px;
+  cursor: pointer;
+  color: inherit;
+}
+.stepper .val-btn:active { background: var(--surface-2); }
 .stepper.poeng .val { min-width: 72px; }
 .stepper.poeng .val small { display: block; font-size: 10px; line-height: 1.1; }
 
