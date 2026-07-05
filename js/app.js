@@ -22,7 +22,10 @@
     mengde: { icon: '📏', label: 'Mengde' },
     tidspunkt: { icon: '🕐', label: 'Tidspunkt' },
     unngaa: { icon: '🚫', label: 'Unngå' },
+    poeng: { icon: '🎯', label: 'Poengmål' },
   };
+
+  const POENG_DEFAULT_TARGET = 1000;
 
   // ---------------------------------------------------------------- utilities
 
@@ -101,7 +104,8 @@
       emoji: tpl.emoji || '⭐',
       category: tpl.category || 'Egne vaner',
       kind: tpl.kind,
-      target: tpl.target ?? (tpl.kind === 'teller' || tpl.kind === 'minutter' || tpl.kind === 'mengde' ? 1 : null),
+      target: tpl.target ?? (tpl.kind === 'poeng' ? POENG_DEFAULT_TARGET
+        : tpl.kind === 'teller' || tpl.kind === 'minutter' || tpl.kind === 'mengde' ? 1 : null),
       unit: tpl.unit || null,
       direction: tpl.direction || 'opp',           // opp | ned | logg (mengde/teller)
       allowNegative: tpl.allowNegative || false,   // teller: la −-knappen gå under 0 (netto-score)
@@ -165,6 +169,8 @@
         return weeklyOrOpen(h, past);
       case 'unngaa':
         return log && log.value >= 1 ? 'fail' : 'success';
+      case 'poeng':
+        return 'log'; // cumulative goal — never a per-day verdict
       case 'teller':
       case 'minutter':
       case 'mengde': {
@@ -241,6 +247,20 @@
     return best;
   }
 
+  // Cumulative ("poeng") total — sum of every day's net delta, up to and
+  // including `uptoIso`. Never resets; this is the running lifetime score.
+  function cumulativeTotal(h, uptoIso) {
+    let sum = 0;
+    for (const key in state.logs) {
+      const cut = key.lastIndexOf('|');
+      if (key.slice(0, cut) !== h.id) continue;
+      if (uptoIso && key.slice(cut + 1) > uptoIso) continue;
+      sum += Number(state.logs[key].value) || 0;
+    }
+    return sum;
+  }
+  const poengReached = (h, iso) => h.target > 0 && cumulativeTotal(h, iso) >= h.target;
+
   // Days since last slip (unngå) — the "12 dager uten"-counter.
   function daysWithout(h, iso) {
     let count = 0;
@@ -254,7 +274,7 @@
 
   // Completion for the day ring: fixed-schedule, verdict-bearing habits only.
   function dayCompletion(iso) {
-    const due = activeHabits().filter((h) => existsOn(h, iso) && dueOnDay(h, iso) && h.direction !== 'logg');
+    const due = activeHabits().filter((h) => existsOn(h, iso) && dueOnDay(h, iso) && h.direction !== 'logg' && h.kind !== 'poeng');
     const done = due.filter((h) => statusFor(h, iso) === 'success').length;
     return { done, total: due.length };
   }
@@ -295,8 +315,9 @@
     const iso = ui.date;
     const isToday = iso === todayISO();
     const habits = activeHabits().filter((h) => existsOn(h, iso));
-    const daily = habits.filter((h) => dueOnDay(h, iso) || (!isWeekly(h) && h.direction === 'logg' && dueOnDay(h, iso)));
-    const weekly = habits.filter(isWeekly);
+    const daily = habits.filter((h) => h.kind !== 'poeng' && (dueOnDay(h, iso) || (!isWeekly(h) && h.direction === 'logg' && dueOnDay(h, iso))));
+    const weekly = habits.filter((h) => isWeekly(h) && h.kind !== 'poeng');
+    const poeng = habits.filter((h) => h.kind === 'poeng');
     const { done, total } = dayCompletion(iso);
     const pct = total ? done / total : 0;
 
@@ -342,10 +363,14 @@
       html += `<div class="section-title">Dagens vaner</div>`;
       html += daily.map((h) => habitCard(h, iso)).join('');
     }
-    const logOnly = habits.filter((h) => h.direction === 'logg' && !isWeekly(h) && !dueOnDay(h, iso));
+    const logOnly = habits.filter((h) => h.kind !== 'poeng' && h.direction === 'logg' && !isWeekly(h) && !dueOnDay(h, iso));
     if (weekly.length) {
       html += `<div class="section-title">Ukemål</div>`;
       html += weekly.map((h) => habitCard(h, iso)).join('');
+    }
+    if (poeng.length) {
+      html += `<div class="section-title">Poengmål</div>`;
+      html += poeng.map((h) => habitCard(h, iso)).join('');
     }
     if (logOnly.length) {
       html += `<div class="section-title">Kun logg</div>`;
@@ -399,7 +424,9 @@
   function habitCard(h, iso) {
     const s = statusFor(h, iso);
     const log = getLog(h.id, iso);
-    const cls = s === 'success' ? 'done' : s === 'fail' && h.kind !== 'unngaa' ? 'failed' : '';
+    const cls = h.kind === 'poeng'
+      ? (poengReached(h, iso) ? 'done' : '')
+      : s === 'success' ? 'done' : s === 'fail' && h.kind !== 'unngaa' ? 'failed' : '';
     return `
       <div class="card habit ${cls}" data-habit="${h.id}">
         <div class="emoji">${h.emoji}</div>
@@ -423,6 +450,13 @@
       bits.push(slipped
         ? `<span class="oops">Glipp denne dagen</span>`
         : `<span class="streak">🔥 ${daysText(daysWithout(h, iso))} uten</span>`);
+    } else if (h.kind === 'poeng') {
+      const total = cumulativeTotal(h, iso);
+      const pct = h.target > 0 ? Math.max(0, Math.min(1, total / h.target)) : 0;
+      bits.push(`<span class="pbar"><i style="width:${Math.round(pct * 100)}%"></i></span>`);
+      bits.push(poengReached(h, iso)
+        ? `<span class="streak">🎯 Mål nådd! (${fmtNum(total)})</span>`
+        : `${fmtNum(total)} / ${fmtNum(h.target)}${h.unit ? ' ' + esc(h.unit) : ''}`);
     } else if (h.direction === 'logg') {
       bits.push('kun trend — ingen rød/grønn');
     } else {
@@ -440,6 +474,7 @@
       case 'minutter': return `mål: ${h.target} min`;
       case 'mengde': return h.direction === 'ned' ? `maks ${fmtNum(h.target)} ${esc(h.unit || '')}` : `mål: ${fmtNum(h.target)} ${esc(h.unit || '')}`;
       case 'tidspunkt': return `${h.timeSide === 'after' ? 'etter' : 'før'} ${h.targetTime}`;
+      case 'poeng': return `mål: ${fmtNum(h.target)}${h.unit ? ' ' + esc(h.unit) : ' poeng'} (akkumulert)`;
       default: return '';
     }
   }
@@ -465,6 +500,16 @@
             <span class="val">${value}${h.direction === 'logg' ? '' : `<small>/${h.target}</small>`}</span>
             <button data-action="counter-inc" aria-label="Pluss én">＋</button>
           </div>`;
+      case 'poeng': {
+        const total = cumulativeTotal(h, iso);
+        const today = value;
+        return `
+          <div class="stepper poeng">
+            <button data-action="counter-dec" aria-label="Minus én">−</button>
+            <span class="val">${fmtNum(total)}${today ? `<small>${today > 0 ? '+' : ''}${fmtNum(today)} i dag</small>` : ''}</span>
+            <button data-action="counter-inc" aria-label="Pluss én">＋</button>
+          </div>`;
+      }
       case 'minutter': {
         const chips = MINUTE_CHIPS.map((m) =>
           `<button data-action="minutes-add" data-min="${m}">+${m}</button>`).join('');
@@ -559,6 +604,12 @@
     if (h.kind === 'unngaa') {
       meta.push(`🔥 <b>${daysWithout(h, todayISO())}</b> ${daysWithout(h, todayISO()) === 1 ? 'dag' : 'dager'} uten`);
       meta.push(`beste: <b>${bestStreak(h)}</b>`);
+    } else if (h.kind === 'poeng') {
+      const total = cumulativeTotal(h, todayISO());
+      const pct = h.target > 0 ? Math.round(100 * Math.max(0, Math.min(1, total / h.target))) : 0;
+      meta.push(`total: <b>${fmtNum(total)}</b> / ${fmtNum(h.target)}`);
+      meta.push(`<b>${pct}%</b> av målet`);
+      if (poengReached(h, todayISO())) meta.push('🎯 <b>nådd</b>');
     } else if (h.direction === 'logg') {
       // handled by sparkline below
     } else if (isWeekly(h)) {
@@ -571,7 +622,9 @@
     }
 
     let body;
-    if (h.direction === 'logg') {
+    if (h.kind === 'poeng') {
+      body = poengStatBody(h);
+    } else if (h.direction === 'logg') {
       body = sparkline(h);
     } else {
       body = heatmap(h) + `
@@ -647,6 +700,40 @@
         </svg>
         <div class="spark-now">Siste: <b>${fmtNum(last.v)} ${esc(h.unit || '')}</b>
           <span style="color:var(--muted)">· min ${fmtNum(min)} · maks ${fmtNum(max)} (60 d)</span></div>
+      </div>`;
+  }
+
+  function poengStatBody(h) {
+    const today = todayISO();
+    const total = cumulativeTotal(h, today);
+    const pct = h.target > 0 ? Math.max(0, Math.min(1, total / h.target)) : 0;
+    const bar = `
+      <div class="poeng-progress">
+        <div class="pp-track"><i style="width:${(pct * 100).toFixed(1)}%"></i></div>
+        <div class="pp-nums"><b>${fmtNum(total)}</b> / ${fmtNum(h.target)}${h.unit ? ' ' + esc(h.unit) : ''} · ${Math.round(pct * 100)}%</div>
+      </div>`;
+
+    const pts = [];
+    let run = 0;
+    for (let d = h.createdAt; d <= today; d = addDays(d, 1)) {
+      run += Number((getLog(h.id, d) || {}).value) || 0;
+      pts.push(run);
+    }
+    if (pts.length < 2) return bar;
+
+    const W = 320, H = 56, PAD = 6;
+    const min = Math.min(0, ...pts), max = Math.max(h.target || 1, ...pts);
+    const span = max - min || 1;
+    const x = (i) => PAD + (i / (pts.length - 1)) * (W - 2 * PAD);
+    const y = (v) => H - PAD - ((v - min) / span) * (H - 2 * PAD);
+    const path = pts.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const goalY = y(h.target).toFixed(1);
+    return `${bar}
+      <div class="spark">
+        <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Akkumulert poeng over tid mot mål ${fmtNum(h.target)}">
+          <line x1="${PAD}" y1="${goalY}" x2="${W - PAD}" y2="${goalY}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="3 3"/>
+          <path d="${path}" fill="none" stroke="var(--chart-blue)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
       </div>`;
   }
 
@@ -945,7 +1032,7 @@
             <span>Tillat negative tall — telleren kan gå under 0 (netto-score, f.eks. +1 for «nei», −1 for «ja»)</span>
           </label>
         </div>
-        <div>
+        <div id="hf-plan-row">
           <label>Plan</label>
           <div class="seg" data-seg="schedMode">
             <button type="button" data-val="daily" class="${schedMode === 'daily' ? 'on' : ''}">daglig</button>
@@ -968,13 +1055,19 @@
     const kind = form.elements.namedItem('kind').value;
     const schedMode = $('[data-seg="schedMode"] .on', form)?.dataset.val || 'daily';
     const show = (id, on) => { const el = $(id, form); if (el) el.style.display = on ? '' : 'none'; };
-    show('#hf-target-row', kind === 'teller' || kind === 'minutter' || kind === 'mengde');
-    show('#hf-unit-wrap', kind === 'mengde' || kind === 'teller');
+    const isPoeng = kind === 'poeng';
+    show('#hf-target-row', kind === 'teller' || kind === 'minutter' || kind === 'mengde' || isPoeng);
+    show('#hf-unit-wrap', kind === 'mengde' || kind === 'teller' || isPoeng);
     show('#hf-time-row', kind === 'tidspunkt');
     show('#hf-direction-row', kind === 'mengde' || kind === 'teller');
-    show('#hf-negative-row', kind === 'teller');
-    show('#hf-days-row', schedMode === 'days');
-    show('#hf-weekly-row', schedMode === 'weekly');
+    show('#hf-negative-row', kind === 'teller' || isPoeng);
+    // Prefill a sensible default target the first time Poengmål is picked.
+    const tgt = $('#hf-target', form);
+    if (isPoeng && tgt && tgt.value === '') tgt.value = POENG_DEFAULT_TARGET;
+    // Poengmål is a lifetime cumulative goal — no daily/weekly schedule.
+    show('#hf-plan-row', !isPoeng);
+    show('#hf-days-row', schedMode === 'days' && !isPoeng);
+    show('#hf-weekly-row', schedMode === 'weekly' && !isPoeng);
   }
 
   function submitHabitForm(form) {
@@ -996,7 +1089,7 @@
       target: field('target').value !== '' ? Number(field('target').value) : null,
       unit: field('unit').value.trim() || null,
       direction,
-      allowNegative: kind === 'teller' && !!field('allowNegative')?.checked,
+      allowNegative: (kind === 'teller' || kind === 'poeng') && !!field('allowNegative')?.checked,
       targetTime: kind === 'tidspunkt' ? field('targetTime').value || '22:00' : null,
       timeSide,
       weeklyTarget: schedMode === 'weekly' ? Math.max(1, Math.min(7, Number(field('weeklyTarget').value) || 1)) : null,
@@ -1005,6 +1098,9 @@
     if (!data.name) return;
     if ((kind === 'teller' || kind === 'minutter' || kind === 'mengde') && direction !== 'logg' && (data.target == null || Number.isNaN(data.target))) {
       data.target = 1;
+    }
+    if (kind === 'poeng' && (data.target == null || Number.isNaN(data.target) || data.target <= 0)) {
+      data.target = POENG_DEFAULT_TARGET;
     }
 
     if (editingId) {
@@ -1052,23 +1148,27 @@
 
   // ------------------------------------------------ confetti
 
+  function fireConfetti() {
+    const colors = ['#4ccf8a', '#eda100', '#5598e7', '#e66767', '#d55181', '#f2f7f0'];
+    const root = $('#confetti-root');
+    for (let i = 0; i < 48; i++) {
+      const c = document.createElement('span');
+      c.className = 'confetto';
+      c.style.left = `${Math.random() * 100}%`;
+      c.style.background = colors[i % colors.length];
+      c.style.animationDelay = `${Math.random() * 0.5}s`;
+      c.style.animationDuration = `${2 + Math.random() * 1.2}s`;
+      root.appendChild(c);
+      setTimeout(() => c.remove(), 3800);
+    }
+  }
+
   function maybeCelebrate(iso) {
     if (iso !== todayISO()) return;
     const { done, total } = dayCompletion(iso);
     if (total > 0 && done === total && lastPerfectShown !== iso) {
       lastPerfectShown = iso;
-      const colors = ['#4ccf8a', '#eda100', '#5598e7', '#e66767', '#d55181', '#f2f7f0'];
-      const root = $('#confetti-root');
-      for (let i = 0; i < 48; i++) {
-        const c = document.createElement('span');
-        c.className = 'confetto';
-        c.style.left = `${Math.random() * 100}%`;
-        c.style.background = colors[i % colors.length];
-        c.style.animationDelay = `${Math.random() * 0.5}s`;
-        c.style.animationDuration = `${2 + Math.random() * 1.2}s`;
-        root.appendChild(c);
-        setTimeout(() => c.remove(), 3800);
-      }
+      fireConfetti();
     }
   }
 
@@ -1145,11 +1245,21 @@
         rerender(); break;
       }
       case 'counter-inc': case 'counter-dec': {
+        const delta = action === 'counter-inc' ? 1 : -1;
         const log = getLog(habit.id, iso);
         const cur = log ? Number(log.value) || 0 : 0;
-        const floor = habit.allowNegative ? -Infinity : 0;
-        const next = Math.max(floor, cur + (action === 'counter-inc' ? 1 : -1));
-        setLog(habit.id, iso, next === 0 ? null : { value: next });
+        if (habit.kind === 'poeng') {
+          // Clamp on the cumulative lifetime total, not the single day.
+          if (!habit.allowNegative && cumulativeTotal(habit, iso) + delta < 0) break;
+          const reachedBefore = poengReached(habit, iso);
+          const nextDay = cur + delta;
+          setLog(habit.id, iso, nextDay === 0 ? null : { value: nextDay });
+          if (iso === todayISO() && !reachedBefore && poengReached(habit, iso)) fireConfetti();
+        } else {
+          const floor = habit.allowNegative ? -Infinity : 0;
+          const next = Math.max(floor, cur + delta);
+          setLog(habit.id, iso, next === 0 ? null : { value: next });
+        }
         rerender(); break;
       }
       case 'minutes-add': {

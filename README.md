@@ -23,16 +23,17 @@ biblioteket med ~60 vaner i 8 kategorier.
 
 ## Funksjoner
 
-### Seks måletyper + ukemål (fra spesifikasjonen)
+### Sju måletyper + ukemål (fra spesifikasjonen)
 
 | Type | Slik logger du | Suksess når |
 |---|---|---|
 | ✅ Sjekk | ett trykk | logget den dagen |
-| 🔢 Teller | − / ＋ stepper | verdi ≥ mål (eller ≤ mål ved retning «ned») |
+| 🔢 Teller | − / ＋ stepper (kan tillate negative tall) | verdi ≥ mål (eller ≤ mål ved retning «ned») |
 | ⏱️ Minutter | hurtigknapper 5 · 10 · 20 · 30 · ✎ | minutter ≥ mål |
 | 📏 Mengde | tall + enhet (km, g, kr …) | opp: ≥ mål · ned: ≤ mål · logg: kun trend |
 | 🕐 Tidspunkt | klokkeslett (eller «nå») | på riktig side av målet («før 23:00») |
 | 🚫 Unngå | *invertert:* dagen lykkes automatisk med mindre du logger en glipp | vises som «🔥 12 dager uten» |
+| 🎯 Poengmål | − / ＋ stepper, akkumuleres over tid (nullstilles aldri) | livstidssum ≥ mål (f.eks. 1000) |
 | 🗓️ Ukemål | kombineres med alle typene | N fullføringer per uke, vises som 2/3 |
 
 ### I tillegg
