@@ -803,18 +803,22 @@
       return `
         <div class="card">
           <p style="font-size:13px;color:var(--text-2);margin:0 0 8px">
-            Logg inn med e-post for å synke mellom enheter. Du får en engangskode — intet passord.
+            Logg inn med e-post for å synke mellom enheter — intet passord.
           </p>
           <div class="form-grid">
             <input type="email" id="sync-email" placeholder="din@epost.no" value="${esc(ui.syncEmail)}"
                    style="width:100%;border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:10px;padding:9px 10px;font-size:15px">
             ${ui.syncSent ? `
-              <input type="text" id="sync-code" inputmode="numeric" placeholder="6-sifret kode fra e-posten"
+              <p style="font-size:13px;color:var(--text-2);margin:0">
+                📬 Sjekk e-posten din og <strong>klikk innloggingslenken</strong>.
+                Fikk du en 6-sifret kode i stedet, skriv den inn her:
+              </p>
+              <input type="text" id="sync-code" inputmode="numeric" placeholder="6-sifret kode (valgfritt)"
                      style="width:100%;border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:10px;padding:9px 10px;font-size:15px">
-              <button class="big-btn" style="margin:0" data-action="sync-verify" ${ui.syncBusy ? 'disabled' : ''}>Logg inn</button>
-              <button class="link-btn" data-action="sync-send" ${ui.syncBusy ? 'disabled' : ''}>Send ny kode</button>
+              <button class="big-btn" style="margin:0" data-action="sync-verify" ${ui.syncBusy ? 'disabled' : ''}>Logg inn med kode</button>
+              <button class="link-btn" data-action="sync-send" ${ui.syncBusy ? 'disabled' : ''}>Send ny e-post</button>
             ` : `
-              <button class="big-btn" style="margin:0" data-action="sync-send" ${ui.syncBusy ? 'disabled' : ''}>Send innloggingskode</button>
+              <button class="big-btn" style="margin:0" data-action="sync-send" ${ui.syncBusy ? 'disabled' : ''}>Send innloggingslenke</button>
             `}
           </div>
           ${err}

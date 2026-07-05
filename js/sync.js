@@ -53,17 +53,30 @@ const SporSync = (() => {
     });
     window.addEventListener('online', () => { if (session) syncNow(); });
     if (session) {
-      setStatus('in');
-      syncNow();
+      // afterLogin (not just syncNow) so a session that arrives during init —
+      // e.g. returning from a magic-link redirect — still gets the first-login
+      // full push of local data.
+      afterLogin();
     } else {
       setStatus('out');
     }
   }
 
-  // ------------------------------------------------ auth (email code)
+  // ------------------------------------------------ auth (email link or code)
 
+  /* Supabase's free tier locks the email templates, and the default mail
+   * contains a magic link rather than the 6-digit code. We support both:
+   * emailRedirectTo brings the link back to this app (session is then picked
+   * up from the URL by supabase-js), and verifyCode still works for projects
+   * whose templates include {{ .Token }}. */
   async function sendCode(email) {
-    const { error } = await client.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+    const { error } = await client.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: window.location.origin + window.location.pathname,
+      },
+    });
     if (error) throw error;
   }
 
