@@ -104,6 +104,7 @@
       target: tpl.target ?? (tpl.kind === 'teller' || tpl.kind === 'minutter' || tpl.kind === 'mengde' ? 1 : null),
       unit: tpl.unit || null,
       direction: tpl.direction || 'opp',           // opp | ned | logg (mengde/teller)
+      allowNegative: tpl.allowNegative || false,   // teller: la −-knappen gå under 0 (netto-score)
       targetTime: tpl.targetTime || null,          // "HH:MM" for tidspunkt
       timeSide: tpl.timeSide || 'before',          // before | after
       weeklyTarget: tpl.weekly ?? tpl.weeklyTarget ?? null, // N per week; null → weekdays[]
@@ -461,7 +462,7 @@
         return `
           <div class="stepper">
             <button data-action="counter-dec" aria-label="Minus én">−</button>
-            <span class="val">${value}<small>/${h.target}</small></span>
+            <span class="val">${value}${h.direction === 'logg' ? '' : `<small>/${h.target}</small>`}</span>
             <button data-action="counter-inc" aria-label="Pluss én">＋</button>
           </div>`;
       case 'minutter': {
@@ -938,6 +939,12 @@
             <button type="button" data-val="logg" class="${h.direction === 'logg' ? 'on' : ''}">📓 kun logg</button>
           </div>
         </div>
+        <div id="hf-negative-row">
+          <label class="check-label">
+            <input id="hf-negative" name="allowNegative" type="checkbox" ${h.allowNegative ? 'checked' : ''}>
+            <span>Tillat negative tall — telleren kan gå under 0 (netto-score, f.eks. +1 for «nei», −1 for «ja»)</span>
+          </label>
+        </div>
         <div>
           <label>Plan</label>
           <div class="seg" data-seg="schedMode">
@@ -965,6 +972,7 @@
     show('#hf-unit-wrap', kind === 'mengde' || kind === 'teller');
     show('#hf-time-row', kind === 'tidspunkt');
     show('#hf-direction-row', kind === 'mengde' || kind === 'teller');
+    show('#hf-negative-row', kind === 'teller');
     show('#hf-days-row', schedMode === 'days');
     show('#hf-weekly-row', schedMode === 'weekly');
   }
@@ -988,6 +996,7 @@
       target: field('target').value !== '' ? Number(field('target').value) : null,
       unit: field('unit').value.trim() || null,
       direction,
+      allowNegative: kind === 'teller' && !!field('allowNegative')?.checked,
       targetTime: kind === 'tidspunkt' ? field('targetTime').value || '22:00' : null,
       timeSide,
       weeklyTarget: schedMode === 'weekly' ? Math.max(1, Math.min(7, Number(field('weeklyTarget').value) || 1)) : null,
@@ -1002,7 +1011,8 @@
       const h = habitById(editingId);
       Object.assign(h, {
         name: data.name, emoji: data.emoji, target: data.target, unit: data.unit,
-        direction: data.direction, targetTime: data.targetTime, timeSide: data.timeSide,
+        direction: data.direction, allowNegative: data.allowNegative,
+        targetTime: data.targetTime, timeSide: data.timeSide,
         weeklyTarget: data.weeklyTarget, weekdays: data.weekdays,
       });
       touchHabit(h);
@@ -1137,7 +1147,8 @@
       case 'counter-inc': case 'counter-dec': {
         const log = getLog(habit.id, iso);
         const cur = log ? Number(log.value) || 0 : 0;
-        const next = Math.max(0, cur + (action === 'counter-inc' ? 1 : -1));
+        const floor = habit.allowNegative ? -Infinity : 0;
+        const next = Math.max(floor, cur + (action === 'counter-inc' ? 1 : -1));
         setLog(habit.id, iso, next === 0 ? null : { value: next });
         rerender(); break;
       }

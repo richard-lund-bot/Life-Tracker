@@ -54,6 +54,9 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.45;
+  /* Slår av dobbeltrykk-zoom (og 300ms tap-forsinkelsen), men beholder
+     pinch-zoom for tilgjengelighet. */
+  touch-action: manipulation;
 }
 button { font: inherit; color: inherit; }
 
@@ -472,6 +475,23 @@ button { font: inherit; color: inherit; }
   border-radius: 10px;
   padding: 9px 10px;
   font-size: 15px;
+}
+.form-grid label.check-label {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 0;
+  font-weight: 500;
+  color: var(--text-2);
+  line-height: 1.35;
+  cursor: pointer;
+}
+.form-grid label.check-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  accent-color: var(--accent);
 }
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .form-row-emoji { display: grid; grid-template-columns: 76px 1fr; gap: 10px; }
