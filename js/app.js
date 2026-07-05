@@ -1397,6 +1397,15 @@
 
   // ------------------------------------------------ boot
 
+  // Fully disable zoom. `touch-action: manipulation` (CSS) kills double-tap
+  // zoom, and the viewport meta blocks it on most browsers — but iOS Safari
+  // ignores `user-scalable=no`, so pinch-zoom needs these gesture/touch guards.
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach((ev) =>
+    document.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
+  document.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 1) e.preventDefault(); // pinch = 2+ fingers
+  }, { passive: false });
+
   render();
 
   SporSync.init({
