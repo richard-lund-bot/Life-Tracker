@@ -300,6 +300,16 @@ button { font: inherit; color: inherit; }
   font-variant-numeric: tabular-nums;
 }
 .amount .unit { font-size: 13px; color: var(--muted); }
+.amount .chip-reset {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--danger);
+  border-radius: 999px;
+  width: 30px; height: 30px;
+  font-size: 15px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
 
 .slip-btn {
   border: 1px solid var(--line);
